@@ -1,5 +1,5 @@
-# Designed to be run as 
-# 
+# Designed to be run as
+#
 # docker run -it -p 8000:8000 jupyterhub/oauthenticator
 
 FROM jupyterhub/jupyterhub
