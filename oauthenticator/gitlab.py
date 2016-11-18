@@ -16,13 +16,15 @@ from tornado import gen, web
 from tornado.httputil import url_concat
 from tornado.httpclient import HTTPRequest, AsyncHTTPClient
 
+from traitlets import Set
+
 from jupyterhub.auth import LocalAuthenticator
 
 from .oauth2 import OAuthLoginHandler, OAuthenticator
 
 # Support gitlab.com and gitlab community edition installations
 GITLAB_HOST = os.environ.get('GITLAB_HOST') or 'https://gitlab.com'
-GITLAB_API = '%s/api/v3/user' % GITLAB_HOST
+GITLAB_API = '%s/api/v3' % GITLAB_HOST
 
 class GitLabMixin(OAuth2Mixin):
     _OAUTH_AUTHORIZE_URL = "%s/oauth/authorize" % GITLAB_HOST
@@ -40,6 +42,16 @@ class GitLabOAuthenticator(OAuthenticator):
     client_id_env = 'GITLAB_CLIENT_ID'
     client_secret_env = 'GITLAB_CLIENT_SECRET'
     login_handler = GitLabLoginHandler
+
+    team_whitelist = Set(
+        config=True,
+        help="Automatically whitelist members of selected teams",
+    )
+
+    headers={"Accept": "application/json",
+             "User-Agent": "JupyterHub",
+    }
+    access_token = ''
 
     @gen.coroutine
     def authenticate(self, handler, data=None):
@@ -69,27 +81,48 @@ class GitLabOAuthenticator(OAuthenticator):
 
         req = HTTPRequest(url,
                           method="POST",
-                          headers={"Accept": "application/json"},
+                          headers=self.headers,
                           body='' # Body is required for a POST...
                           )
 
         resp = yield http_client.fetch(req)
         resp_json = json.loads(resp.body.decode('utf8', 'replace'))
 
-        access_token = resp_json['access_token']
+        self.access_token = resp_json['access_token']
 
         # Determine who the logged in user is
-        headers={"Accept": "application/json",
-                 "User-Agent": "JupyterHub",
-        }
-        req = HTTPRequest("%s?access_token=%s" % (GITLAB_API, access_token),
-                          method="GET",
-                          headers=headers
-                          )
+        url = url_concat('%s/user' % GITLAB_API, dict(access_token=self.access_token))
+        req = HTTPRequest(url, method="GET", headers=self.headers)
         resp = yield http_client.fetch(req)
         resp_json = json.loads(resp.body.decode('utf8', 'replace'))
 
         return resp_json["username"]
+
+    def check_whitelist(self, username, headers=None):
+        headers = headers if headers else self.headers
+        if self.team_whitelist:
+            return self._check_group_whitelist(username, headers)
+        else:
+            return self._check_user_whitelist(username)
+
+    @gen.coroutine
+    def _check_user_whitelist(self, user):
+        return (not self.whitelist) or (user in self.whitelist)
+
+    @gen.coroutine
+    def _check_group_whitelist(self, username, headers=None):
+        http_client = AsyncHTTPClient()
+
+        # We verify the team membership by calling groups endpoint.
+        headers = headers if headers else self.headers
+        url = url_concat('%s/groups' % GITLAB_API,
+                         dict(access_token=self.access_token, all_available=True))
+        req = HTTPRequest(url, method="GET", headers=headers)
+        resp = yield http_client.fetch(req)
+        resp_json = json.loads(resp.body.decode('utf8', 'replace'))
+
+        user_teams = set(group['path'] for group in resp_json)
+        return len(self.team_whitelist & user_teams) > 0
 
 
 class LocalGitLabOAuthenticator(LocalAuthenticator, GitLabOAuthenticator):
