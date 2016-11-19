@@ -98,12 +98,28 @@ class GitLabOAuthenticator(OAuthenticator):
 
         return resp_json["username"]
 
+    @gen.coroutine
+    def get_authenticated_user(self, handler, data):
+        username = yield self.authenticate(handler, data)
+        if username is None:
+            return
+        username = self.normalize_username(username)
+        if not self.validate_username(username):
+            self.log.warning("Disallowing invalid username %r.", username)
+            return
+        if (yield self.check_whitelist(username)):
+            return username
+        else:
+            self.log.warning("User %r not in whitelist.", username)
+            return
+
+    @gen.coroutine
     def check_whitelist(self, username, headers=None):
         headers = headers if headers else self.headers
         if self.team_whitelist:
-            return self._check_group_whitelist(username, headers)
+            return (yield self._check_group_whitelist(username, headers))
         else:
-            return self._check_user_whitelist(username)
+            return (yield self._check_user_whitelist(username))
 
     @gen.coroutine
     def _check_user_whitelist(self, user):
