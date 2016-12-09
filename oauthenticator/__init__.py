@@ -5,5 +5,6 @@ from .github import *
 from .gitlab import *
 from .bitbucket import *
 from .google import *
+from .tudelft import *
 
 from ._version import __version__, version_info
