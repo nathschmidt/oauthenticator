@@ -71,7 +71,7 @@ class TUDelftOAuthenticator(OAuthenticator):
 
         headers={
             "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencode",
+            "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic {}".format(auth),
         }
 
