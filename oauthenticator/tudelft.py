@@ -20,9 +20,10 @@ def _base64encode(s):
     return base64.encodebytes(s.encode('utf8')).decode('utf8').strip()
 
 # Support github.com and github enterprise installations
-TUDELFT_HOST = 'oauth.tudelft.nl'
-TUDELFT_OAUTH_ENDPOINT = 'https://{}/OAuth/oauth2'.format(TUDELFT_HOST)
-TUDELFT_API_ENDPOINT = 'https://{}/v1'.format(TUDELFT_HOST)
+TUDELFT_OAUTH_HOST = 'oauth.tudelft.nl'
+TUDELFT_API_HOST = 'api.tudelft.nl'
+TUDELFT_OAUTH_ENDPOINT = 'https://{}/OAuth/oauth2'.format(TUDELFT_OAUTH_HOST)
+TUDELFT_API_ENDPOINT = 'https://{}/v1'.format(TUDELFT_API_HOST)
 
 
 class TUDelftMixin(OAuth2Mixin):
@@ -96,7 +97,7 @@ class TUDelftOAuthenticator(OAuthenticator):
             "Authorization": "Bearer {}".format(_base64encode(access_token)),
         }
         req = HTTPRequest(
-            "{}/tokeninfo".format(TUDELFT_API_ENDPOINT),
+            "{}/tokeninfo/?format=json".format(TUDELFT_API_ENDPOINT),
             method="GET",
             headers=headers
         )
