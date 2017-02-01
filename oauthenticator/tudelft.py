@@ -17,7 +17,7 @@ from traitlets import Unicode
 from .oauth2 import OAuthLoginHandler, OAuthenticator
 
 def _base64encode(s):
-    return base64.encodebytes(s.encode('utf8')).decode('utf8')
+    return base64.encodebytes(s.encode('utf8')).decode('utf8').strip()
 
 # Support github.com and github enterprise installations
 TUDELFT_HOST = 'oauth.tudelft.nl'
@@ -67,7 +67,6 @@ class TUDelftOAuthenticator(OAuthenticator):
         auth = _base64encode(
             '{}:{}'
             .format(self.client_id, self.client_secret)
-            .encode('utf-8')
         )
 
         headers={
