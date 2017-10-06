@@ -96,6 +96,9 @@ class GitLabOAuthenticator(OAuthenticator):
 
         access_token = resp_json['access_token']
 
+        self.log.info('BODY: {}'.format(resp.body))
+        self.log.info('ACCESS TOKEN: {}'.format(access_token))
+
         # Determine who the logged in user is
         req = HTTPRequest("%s/user" % GITLAB_API,
                           method="GET",
