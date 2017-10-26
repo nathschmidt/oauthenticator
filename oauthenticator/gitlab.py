@@ -58,7 +58,6 @@ class GitLabOAuthenticator(OAuthenticator):
         help="Automatically whitelist members of selected groups",
     )
 
-
     @gen.coroutine
     def authenticate(self, handler, data=None):
         code = handler.get_argument("code")
@@ -114,9 +113,9 @@ class GitLabOAuthenticator(OAuthenticator):
         if self.gitlab_group_whitelist:
             user_in_group = yield self._check_group_whitelist(
                 username, user_id, is_admin, access_token)
-            return username if user_in_group else None
+            return {'name': username, auth_state: {'access_token': access_token}} if user_in_group else None
         else:  # no organization whitelisting
-            return username
+            return {'name': username, auth_state: {'access_token': access_token}}
 
 
     @gen.coroutine
